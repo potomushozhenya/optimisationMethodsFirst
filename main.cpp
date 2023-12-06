@@ -13,6 +13,24 @@
  *
  *
  */
+std::vector<double> operator+(std::vector<double> a, std::vector<double> b) {
+    for (int i = 0; i < a.size(); i++) {
+        a[i] += b[i];
+    }
+    return a;
+}
+std::vector<double> operator-(std::vector<double> a, std::vector<double> b) {
+    for (int i = 0; i < a.size(); i++) {
+        a[i] -= b[i];
+    }
+    return a;
+}
+std::vector<double> operator*(double a, std::vector<double> b) {
+    for (int i = 0; i < b.size(); i++) {
+        b[i] *= a;
+    }
+    return b;
+}
 double f(double &x){
     return std::exp(x*0.6)+std::exp(x*0.1)+std::exp(x*0.12)-2.8*std::sin(x);
 }
@@ -90,8 +108,28 @@ double dichotomy(double &leftBorder, double &rightBorder, double &eps){
     } while (((b-a)/2)>=eps);
     return (a+b)/2;
 }
-double fibonacci(){
-
+double fibonacci(double (*f)(double&), double &leftBorder, double &rightBorder, double eps){
+    std::vector<int> fibSeq = {1, 1, 2};
+    int n = 2;
+    while (fibSeq[n] < ((rightBorder - leftBorder)/eps)){
+        fibSeq.push_back(fibSeq[n]+fibSeq[n-1]);
+        ++n;
+    }
+    fibSeq.push_back(fibSeq[n]+fibSeq[n-1]);
+    ++n;
+    fibSeq.push_back(fibSeq[n]+fibSeq[n-1]);
+    --(--n);
+    double a = leftBorder, b = rightBorder;
+    for (int i = 0; i < n; ++i) {
+        double c = a + (b - a)*((double)fibSeq[n+1-i]/(double)fibSeq[n+3-i]);
+        double d = a + (b - a)*((double)fibSeq[n+2-i]/(double)fibSeq[n+3-i]);
+        if (f(c) < f(d)) {
+            b = d;
+        } else {
+            a = c;
+        }
+    }
+    return (a+b)/2;
 }
 double tangentMethod(double (*f)(double&), double (*fDer)(double&), double& a, double& b, double eps){
     if (fDer(a) >= 0){
@@ -130,6 +168,39 @@ double newtonRaphson(double (*fDer)(double&), double (*f2Der)(double&), double& 
     }
     return x;
 }
+double der2Apr(double (*fDer)(double&), double &x, double xPrev){
+    double res = (fDer(x)-fDer(xPrev))/(x-xPrev);
+    return res;
+}
+double secantMethod(double (*fDer)(double&), double& x0, double eps){
+    double x = x0;
+    double xPrev = 0;
+    double kCurr = fDer(x0);
+    double k2Curr = der2Apr(fDer, x, xPrev);
+    while (std::abs(kCurr)>= eps){
+        xPrev = x;
+        x = x - kCurr/k2Curr;
+        kCurr = fDer(x);
+        k2Curr = f2Der(x);
+    }
+    return x;
+}
+double coordinateDescent(double (*f)(double&), std::vector<double> &x0, double step){
+    bool flag;
+    std::vector<double> x = x0;
+    while (true){
+        flag = true;
+        for (int i = 0; i < x0.size(); ++i) {
+
+
+        }
+        if (flag){
+            break;
+        }
+    }
+
+    return 0;
+}
 int main() {
     //Начальные границы для метода дихотомии a=0 и b=2
     //Золотое сечение, метод касательных, Ньютона-Рафсона
@@ -137,12 +208,16 @@ int main() {
     //0-x1^2    1-x2^2    2-x3^2    3-x1x2    4-x1x3    5-x2x3    6-x1    7-x2    8-x3    9-c
     double a=1;
     double b=2;
+    double x0 = 0.5;
     double eps=0.0000001;
     std::cout << std::fixed;
     std::cout << std::setprecision(16);
     std::vector<double> myPoly = {3,4,5,2,-1,-2,1,0,-3,0};
-    std::cout << goldenRatio(a,b,eps) << std::endl;
-    std::cout << passiveSearch(f, a, b, 100000) << std::endl;
-    std::cout << newtonRaphson(fDer, f2Der,a , 0.0000001) << std::endl;
+    //std::cout << goldenRatio(a,b,eps) << std::endl;
+    //std::cout << fibonacci(f, a, b, 0.00001)<< std::endl;
+    //std::cout << passiveSearch(f, a, b, 100000) << std::endl;
+    //std::cout << newtonRaphson(fDer, f2Der,a , 0.0000001) << std::endl;
+    //std::cout << secantMethod(fDer, x0, 0.001) << std::endl;
+
     return 0;
 }
