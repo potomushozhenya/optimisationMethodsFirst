@@ -2,17 +2,7 @@
 #include "cmath"
 #include "vector"
 #include "iomanip"
-/* check-list
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
+
 std::vector<double> operator+(std::vector<double> a, std::vector<double> b) {
     for (int i = 0; i < a.size(); i++) {
         a[i] += b[i];
@@ -31,8 +21,27 @@ std::vector<double> operator*(double a, std::vector<double> b) {
     }
     return b;
 }
+std::vector<double> baseVec(int &i, double &h, std::vector<double> &x){
+    std::vector<double> res;
+    unsigned int vecSize = x.size();
+    res.resize(vecSize);
+    for (int j = 0; j < vecSize; ++j) {
+        if (j!=i){
+            res[j] = 0;
+        } else{
+            res[i] = h;
+        }
+    }
+    return res;
+}
 double f(double &x){
     return std::exp(x*0.6)+std::exp(x*0.1)+std::exp(x*0.12)-2.8*std::sin(x);
+}
+double fMul(std::vector<double> &x){
+    double res;
+    res = pow(x[0]-1, 2);
+    res += pow(x[1]+1, 2);
+    return res;
 }
 double fDer(double &x){
     return 0.6*std::exp(x*0.6)+0.1*std::exp(x*0.1)+0.12*std::exp(x*0.12)-2.8*std::cos(x);
@@ -42,6 +51,14 @@ double f2Der(double &x){
 }
 double polyMean(double *x, double *poly){
     return poly[0]*pow(x[0],2)+poly[1]*pow(x[1],2)+poly[2]*pow(x[2],2)+poly[3]*x[0]*x[1]+poly[4]*x[0]*x[2]+poly[5]*x[1]*x[2]+poly[6]*x[0]+poly[7]*x[1]+poly[8]*x[2]+poly[9];
+}
+std::ostream& operator << (std::ostream &os, std::vector<double> x)
+{
+    for (int i = 0; i < x.size(); ++i) {
+        std::cout<<x[i]<<" ";
+    }
+    std::cout<<std::endl;
+    return os;
 }
 double** derivativeQuadraticFunc(double *coef){
     auto **resultCoef = new double*[3];
@@ -185,21 +202,37 @@ double secantMethod(double (*fDer)(double&), double& x0, double eps){
     }
     return x;
 }
-double coordinateDescent(double (*f)(double&), std::vector<double> &x0, double step){
+std::vector<double> coordinateDescent(double (*f)(std::vector<double>&), std::vector<double> &x0, double step, double localTol){
     bool flag;
+    bool flagLocal;
     std::vector<double> x = x0;
     while (true){
         flag = true;
-        for (int i = 0; i < x0.size(); ++i) {
-
-
+        for (int i = 0; i < x.size(); ++i) {
+            flagLocal = true;
+            while (flagLocal) {
+                std::vector<double> curr = baseVec(i, step, x);
+                std::vector<double> aPoint = x + curr;
+                double a = f(aPoint);
+                std::vector<double> bPoint = x - curr;
+                double b = f(bPoint);
+                if (std::abs(a-b) <= localTol){
+                    flagLocal = false;
+                } else{
+                    flag = false;
+                    if (a < b){
+                        x = aPoint;
+                    } else{
+                        x = bPoint;
+                    }
+                }
+            }
         }
         if (flag){
             break;
         }
     }
-
-    return 0;
+    return x;
 }
 int main() {
     //Начальные границы для метода дихотомии a=0 и b=2
@@ -209,6 +242,7 @@ int main() {
     double a=1;
     double b=2;
     double x0 = 0.5;
+    std::vector<double> xVec = {3, 3};
     double eps=0.0000001;
     std::cout << std::fixed;
     std::cout << std::setprecision(16);
@@ -218,6 +252,7 @@ int main() {
     //std::cout << passiveSearch(f, a, b, 100000) << std::endl;
     //std::cout << newtonRaphson(fDer, f2Der,a , 0.0000001) << std::endl;
     //std::cout << secantMethod(fDer, x0, 0.001) << std::endl;
+    std::cout << coordinateDescent(fMul, xVec, 0.05, 0.00000001);
 
     return 0;
 }
