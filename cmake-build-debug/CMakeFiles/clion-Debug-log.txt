@@ -11,6 +11,6 @@
 -- Check for working CXX compiler: C:/Program Files/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/c++.exe - skipped
 -- Detecting CXX compile features
 -- Detecting CXX compile features - done
--- Configuring done (2.5s)
+-- Configuring done (4.2s)
 -- Generating done (0.0s)
 -- Build files have been written to: C:/Users/zhest/CLionProjects/optimisation/cmake-build-debug

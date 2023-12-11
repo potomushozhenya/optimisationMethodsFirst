@@ -21,6 +21,13 @@ std::vector<double> operator*(double a, std::vector<double> b) {
     }
     return b;
 }
+double norm(std::vector<double> x){
+    double res = 0;
+    for (int i = 0; i < x.size(); ++i) {
+        res += pow(x[i],2);
+    }
+    return sqrt(res);
+}
 std::vector<double> baseVec(int &i, double &h, std::vector<double> &x){
     std::vector<double> res;
     unsigned int vecSize = x.size();
@@ -43,6 +50,13 @@ double fMul(std::vector<double> &x){
     res += pow(x[1]+1, 2);
     return res;
 }
+std::vector<double> fDerMul(std::vector<double> &x){
+    std::vector<double> res;
+    res.resize(2);
+    res[0] = 2*(x[0]-1);
+    res[1] = 2*(x[1]+1);
+    return res;
+}
 double fDer(double &x){
     return 0.6*std::exp(x*0.6)+0.1*std::exp(x*0.1)+0.12*std::exp(x*0.12)-2.8*std::cos(x);
 }
@@ -60,25 +74,27 @@ std::ostream& operator << (std::ostream &os, std::vector<double> x)
     std::cout<<std::endl;
     return os;
 }
-double** derivativeQuadraticFunc(double *coef){
-    auto **resultCoef = new double*[3];
+/*
+double** derivativeQuadraticFunc(double *x){
+    auto **res = new double*[3];
     for (int i = 0; i < 3; ++i) {
-        resultCoef[i] = new double[4];
+        res[i] = new double[4];
     }
-    resultCoef[0][0]=2*coef[0];
-    resultCoef[0][1]=coef[3];
-    resultCoef[0][2]=coef[4];
-    resultCoef[0][3]=coef[6];
-    resultCoef[1][0]=coef[3];
-    resultCoef[1][1]=2*coef[1];
-    resultCoef[1][2]=coef[5];
-    resultCoef[1][3]=coef[7];
-    resultCoef[2][0]=coef[4];
-    resultCoef[2][1]=coef[5];
-    resultCoef[2][2]=2*coef[2];
-    resultCoef[2][3]=coef[8];
-    return resultCoef;
+    res[0][0]=2*x[0];
+    res[0][1]=x[3];
+    res[0][2]=x[4];
+    res[0][3]=x[6];
+    res[1][0]=x[3];
+    res[1][1]=2*x[1];
+    res[1][2]=x[5];
+    res[1][3]=x[7];
+    res[2][0]=x[4];
+    res[2][1]=x[5];
+    res[2][2]=2*x[2];
+    res[2][3]=x[8];
+    return res;
 }
+*/
 double passiveSearch(double (*f)(double&), double &leftBorder, double &rightBorder, double k){
     double res = INFINITY;
     double resPoint;
@@ -92,7 +108,7 @@ double passiveSearch(double (*f)(double&), double &leftBorder, double &rightBord
     }
     return resPoint;
 }
-double goldenRatio(double &leftBorder, double &rightBorder, double &eps){
+double goldenRatio(double (*f)(double&), double &leftBorder, double &rightBorder, double &eps){
     double a=leftBorder;
     double b=rightBorder;
     double c=((3- pow(5,0.5))/2)*(b-a)+a;
@@ -110,7 +126,51 @@ double goldenRatio(double &leftBorder, double &rightBorder, double &eps){
     } while (((b-a)/2)>=eps);
     return (a+b)/2;
 }
-double dichotomy(double &leftBorder, double &rightBorder, double &eps){
+double goldenRatioGradientDuplicate(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> &xk, double &eps){
+    double a=0.001;
+    double b=10;
+    double c=((3- pow(5,0.5))/2)*(b-a)+a;
+    double d=((pow(5,0.5)-1)/2)*(b-a)+a;
+    do {
+        std::vector<double> point1 = xk - c*fDer(xk);
+        double fMean1 = f(point1);
+        std::vector<double> point2 = xk - d*fDer(xk);
+        double fMean2 = f(point2);
+        if (fMean1<=fMean2){
+            b=d;
+            d=c;
+            c=((3- pow(5,0.5))/2)*(b-a)+a;
+        } else{
+            a=c;
+            c=d;
+            d=((pow(5,0.5)-1)/2)*(b-a)+a;
+        }
+    } while (((b-a)/2)>=eps);
+    return (a+b)/2;
+}
+double goldenRatioGradientYDuplicate(double (*f)(std::vector<double>&), std::vector<double> &yk, std::vector<double> &xk, double &eps){
+    double a=0.001;
+    double b=10;
+    double c=((3- pow(5,0.5))/2)*(b-a)+a;
+    double d=((pow(5,0.5)-1)/2)*(b-a)+a;
+    do {
+        std::vector<double> point1 = xk - c*(yk - xk);
+        double fMean1 = f(point1);
+        std::vector<double> point2 = xk - d*(yk-xk);
+        double fMean2 = f(point2);
+        if (fMean1<=fMean2){
+            b=d;
+            d=c;
+            c=((3- pow(5,0.5))/2)*(b-a)+a;
+        } else{
+            a=c;
+            c=d;
+            d=((pow(5,0.5)-1)/2)*(b-a)+a;
+        }
+    } while (((b-a)/2)>=eps);
+    return (a+b)/2;
+}
+double dichotomy(double (*f)(double&), double &leftBorder, double &rightBorder, double &eps){
     double a=leftBorder;
     double b=rightBorder;
     double c,d;
@@ -234,6 +294,66 @@ std::vector<double> coordinateDescent(double (*f)(std::vector<double>&), std::ve
     }
     return x;
 }
+std::vector<double> gradientStepSplitting(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> x0, double initialStep, double multiplier, double eps){
+    std::vector<double> xk = x0;
+    double step;
+    while (norm(fDer(xk)) >= eps){
+        step = initialStep;
+        std::vector<double> xPoint = xk - step*fDer(xk);
+        double fMean = f(xPoint);
+        while ((fMean-f(xk)) > (multiplier*step* pow(norm(fDer(xk)),2))){
+            step *= multiplier;
+            xPoint = xk - step*fDer(xk);
+            fMean = f(xPoint);
+        }
+        xk = xPoint;
+    }
+    return xk;
+}
+std::vector<double> gradientConstStep(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> x0, double initialStep, double eps){
+    std::vector<double> xk = x0;
+    while (norm(fDer(xk)) >= eps){
+        xk = xk - initialStep*fDer(xk);
+    }
+    return xk;
+}
+std::vector<double> gradientFixedStep(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> x0, double initialStep, double eps){
+    std::vector<double> xk = x0;
+    double i = 0;
+    while (norm(fDer(xk)) >= eps){
+        i += 1;
+        xk = xk - (1/i)*fDer(xk);
+    }
+    return xk;
+}
+double minimizationGradientArgument(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> xk, double &eps){
+    return goldenRatioGradientDuplicate(f, fDer, xk, eps);
+}
+std::vector<double> gradientSteepestDescent(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> &x0,  double eps){
+    std::vector<double> xk = x0;
+    double step;
+    while (norm(fDer(xk)) >= eps){
+        xk = xk - minimizationGradientArgument(f, fDer, xk, eps)*fDer(xk);
+    }
+    return xk;
+}
+double minimizationGradientY(double (*f)(std::vector<double>&), std::vector<double> &yk, std::vector<double> &xk, double &eps){
+    return goldenRatioGradientYDuplicate(f, yk, xk, eps);
+}
+std::vector<double> gradientPthOrder(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> &x0,  double eps){
+    std::vector<double> x = x0;
+    while (norm(fDer(x)) >= eps){
+        std::vector<double> xk = x;
+        for (int i = 0; i < xk.size(); ++i) {
+            x = x - minimizationGradientArgument(f, fDer, x, eps)*fDer(x);
+        }
+        x = x + minimizationGradientY(f, x, xk, eps)*(x - xk);
+    }
+    return x;
+}
+std::vector<double> gullyMethod(){
+    
+}
 int main() {
     //Начальные границы для метода дихотомии a=0 и b=2
     //Золотое сечение, метод касательных, Ньютона-Рафсона
@@ -242,17 +362,21 @@ int main() {
     double a=1;
     double b=2;
     double x0 = 0.5;
-    std::vector<double> xVec = {3, 3};
-    double eps=0.0000001;
+    std::vector<double> xVec = {10, -10};
+    //double eps=0.0000001;
     std::cout << std::fixed;
     std::cout << std::setprecision(16);
-    std::vector<double> myPoly = {3,4,5,2,-1,-2,1,0,-3,0};
-    //std::cout << goldenRatio(a,b,eps) << std::endl;
+    //std::vector<double> myPoly = {3,4,5,2,-1,-2,1,0,-3,0};
+    //std::cout << goldenRatio(f,a,b,eps) << std::endl;
     //std::cout << fibonacci(f, a, b, 0.00001)<< std::endl;
     //std::cout << passiveSearch(f, a, b, 100000) << std::endl;
     //std::cout << newtonRaphson(fDer, f2Der,a , 0.0000001) << std::endl;
     //std::cout << secantMethod(fDer, x0, 0.001) << std::endl;
-    std::cout << coordinateDescent(fMul, xVec, 0.05, 0.00000001);
-
+    //std::cout << coordinateDescent(fMul, xVec, 0.05, 0.00000001);
+    //std::cout << gradientStepSplitting(fMul, fDerMul, xVec, 0.5, 0.5, 0.00001);
+    std::cout << gradientConstStep(fMul, fDerMul, xVec, 0.5, 0.00001);
+    //std::cout << gradientFixedStep(fMul, fDerMul, xVec, 0.5, 0.00001);
+    //std::cout << gradientSteepestDescent(fMul, fDerMul, xVec, 0.0000001);
+    std::cout << gradientPthOrder(fMul, fDerMul, xVec, 0.000001);
     return 0;
 }
