@@ -3,4 +3,6 @@ project(optimisation)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(optimisation main.cpp)
+add_executable(optimisation main.cpp
+        matrix.h
+        matrix.cpp)

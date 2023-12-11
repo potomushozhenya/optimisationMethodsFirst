@@ -2,6 +2,7 @@
 #include "cmath"
 #include "vector"
 #include "iomanip"
+#include "matrix.h"
 
 std::vector<double> operator+(std::vector<double> a, std::vector<double> b) {
     for (int i = 0; i < a.size(); i++) {
@@ -21,12 +22,47 @@ std::vector<double> operator*(double a, std::vector<double> b) {
     }
     return b;
 }
+double operator*(std::vector<double> a, std::vector<double> b) {
+    double res = 0;
+    unsigned int vecSize = a.size();
+    if (vecSize != b.size()){
+        throw "Invalid vector arguments";
+    }
+    for (int i = 0; i < vecSize; i++) {
+        res += a[i]*b[i];
+    }
+    return res;
+}
+std::vector<double> operator*(std::vector<std::vector<double>> a, std::vector<double> b) {
+    unsigned int vecSize = b.size();
+    std::vector<double> res(b.size(), 0);
+    if (vecSize != a.size()){
+        throw "Invalid vector arguments";
+    }
+    for (int i = 0; i < vecSize; i++) {
+        double curr = 0;
+        for (int j = 0; j < a[0].size(); ++j) {
+            curr += a[i][j]*b[j];
+        }
+        res[i] = curr;
+    }
+    return res;
+}
 double norm(std::vector<double> x){
     double res = 0;
     for (int i = 0; i < x.size(); ++i) {
         res += pow(x[i],2);
     }
     return sqrt(res);
+}
+std::vector<double> unitVec(std::vector<double> &x){
+    std::vector<double> res;
+    unsigned int vecSize = x.size();
+    res.resize(vecSize);
+    for (int i = 0; i < vecSize; ++i) {
+        res[i] = 1;
+    }
+    return res;
 }
 std::vector<double> baseVec(int &i, double &h, std::vector<double> &x){
     std::vector<double> res;
@@ -55,6 +91,14 @@ std::vector<double> fDerMul(std::vector<double> &x){
     res.resize(2);
     res[0] = 2*(x[0]-1);
     res[1] = 2*(x[1]+1);
+    return res;
+}
+std::vector<std::vector<double>> f2DerMul(std::vector<double> &x){
+    std::vector<std::vector<double>> res(2, std::vector<double> (2, 0));
+    res[0][0] = 2;
+    res[0][1] = 0;
+    res[1][0] = 0;
+    res[1][1] = 2;
     return res;
 }
 double fDer(double &x){
@@ -149,14 +193,60 @@ double goldenRatioGradientDuplicate(double (*f)(std::vector<double>&), std::vect
     return (a+b)/2;
 }
 double goldenRatioGradientYDuplicate(double (*f)(std::vector<double>&), std::vector<double> &yk, std::vector<double> &xk, double &eps){
-    double a=0.001;
+    double a=0.0001;
     double b=10;
     double c=((3- pow(5,0.5))/2)*(b-a)+a;
     double d=((pow(5,0.5)-1)/2)*(b-a)+a;
     do {
         std::vector<double> point1 = xk - c*(yk - xk);
         double fMean1 = f(point1);
-        std::vector<double> point2 = xk - d*(yk-xk);
+        std::vector<double> point2 = xk - d*(yk - xk);
+        double fMean2 = f(point2);
+        if (fMean1<=fMean2){
+            b=d;
+            d=c;
+            c=((3- pow(5,0.5))/2)*(b-a)+a;
+        } else{
+            a=c;
+            c=d;
+            d=((pow(5,0.5)-1)/2)*(b-a)+a;
+        }
+    } while (((b-a)/2)>=eps);
+    return (a+b)/2;
+}
+double goldenRatioFletcherDuplicate(double (*f)(std::vector<double>&), std::vector<double> &xk, std::vector<double> dk, double &eps){
+    double a=0.001;
+    double b=10;
+    double c=((3- pow(5,0.5))/2)*(b-a)+a;
+    double d=((pow(5,0.5)-1)/2)*(b-a)+a;
+    do {
+        std::vector<double> point1 = xk + c*dk;
+        double fMean1 = f(point1);
+        std::vector<double> point2 = xk + d*dk;
+        double fMean2 = f(point2);
+        if (fMean1<=fMean2){
+            b=d;
+            d=c;
+            c=((3- pow(5,0.5))/2)*(b-a)+a;
+        } else{
+            a=c;
+            c=d;
+            d=((pow(5,0.5)-1)/2)*(b-a)+a;
+        }
+    } while (((b-a)/2)>=eps);
+    return (a+b)/2;
+}
+double goldenRatioNewtonDuplicate(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<std::vector<double>>(*f2Der)(std::vector<double>&), std::vector<double> &xk, double &eps){
+    double a=-10;
+    double b=10;
+    double c=((3- pow(5,0.5))/2)*(b-a)+a;
+    double d=((pow(5,0.5)-1)/2)*(b-a)+a;
+    do {
+        std::vector<std::vector<double>> pMatrix = f2Der(xk);
+        std::vector<double> vec = inverse(pMatrix)*fDer(xk);
+        std::vector<double> point1 = xk + c*(vec);
+        double fMean1 = f(point1);
+        std::vector<double> point2 = xk + d*(vec);
         double fMean2 = f(point2);
         if (fMean1<=fMean2){
             b=d;
@@ -351,8 +441,66 @@ std::vector<double> gradientPthOrder(double (*f)(std::vector<double>&), std::vec
     }
     return x;
 }
-std::vector<double> gullyMethod(){
-    
+std::vector<double> gullyMethod(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> &x0,  double eps, double diff){
+    //diff - параметр, который задает разницу между значениям x для овражного метода
+    std::vector<double> x = x0;
+    std::vector<double> _x = x0 + diff*unitVec(x);
+    while (norm(fDer(x)) >= eps){
+        for (int i = 0; i < x.size(); ++i) {
+            x = x - minimizationGradientArgument(f, fDer, x, eps)*fDer(x);
+            _x = _x - minimizationGradientArgument(f, fDer, _x, eps)*fDer(_x);
+        }
+        x = x + minimizationGradientY(f, _x, x, eps)*(_x - x);
+    }
+    return x;
+}
+std::vector<double> conjugateDirectionsMethod(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> &x0,  double eps, bool isFletcherReeves){
+    std::vector<double> d = -1*fDer(x0);
+    std::vector<double> x = x0;
+    std::vector<double> grad = fDer(x);
+    unsigned int n = x0.size();
+    unsigned int k = 0;
+    while (norm(grad) >= eps){
+        double a = goldenRatioFletcherDuplicate(f, x, d, eps);
+        std::vector<double> xPrev = x;
+        std::vector<double> gradPrev = grad;
+        x = x + a*d;
+        grad = fDer(x);
+        if ((k+1) % n == 0){
+            d = -1*grad;
+        } else{
+            double b;
+            if (isFletcherReeves) {
+                b = (pow(norm(grad), 2)) / (pow(norm(gradPrev), 2));
+            } else{
+                b = (grad*(grad-gradPrev)) / (pow(norm(gradPrev), 2));
+            }
+            d = -1*grad+b*d;
+        }
+        ++k;
+    }
+    return x;
+}
+std::vector<double> newtonMethod(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<std::vector<double>>(*f2Der)(std::vector<double>&), std::vector<double> &x0,  double eps){
+    std::vector<double> xk = x0;
+    while (norm(fDer(xk)) >= eps){
+        std::vector<std::vector<double>> currMatrix = f2Der(xk);
+        /*std::cout << currMatrix;
+        std::cout<<std::endl;
+        std::cout<< inverse(currMatrix);
+        std::cout<<std::endl;
+        std::cout << goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps);
+        std::cout <<std::endl;
+        std::cout <<goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps)*(inverse(currMatrix)*fDer(xk));
+        std::cout <<std::endl;
+         goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps)
+         */
+        xk = xk + goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps)*(inverse(currMatrix)*fDer(xk));
+    }
+    return xk;
+}
+std::vector<double> quasiNewtonianMethod(){
+
 }
 int main() {
     //Начальные границы для метода дихотомии a=0 и b=2
@@ -362,7 +510,7 @@ int main() {
     double a=1;
     double b=2;
     double x0 = 0.5;
-    std::vector<double> xVec = {10, -10};
+    std::vector<double> xVec = {-7, 10};
     //double eps=0.0000001;
     std::cout << std::fixed;
     std::cout << std::setprecision(16);
@@ -377,6 +525,12 @@ int main() {
     std::cout << gradientConstStep(fMul, fDerMul, xVec, 0.5, 0.00001);
     //std::cout << gradientFixedStep(fMul, fDerMul, xVec, 0.5, 0.00001);
     //std::cout << gradientSteepestDescent(fMul, fDerMul, xVec, 0.0000001);
-    std::cout << gradientPthOrder(fMul, fDerMul, xVec, 0.000001);
+    //std::cout << gradientPthOrder(fMul, fDerMul, xVec, 0.000001);
+    //std::cout << gullyMethod(fMul, fDerMul, xVec, 0.00001, 0.1);
+    //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, true);
+    //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, false);
+    //std::cout << newtonMethod(fMul, fDerMul, f2DerMul, xVec, 0.00001);
+
+
     return 0;
 }
