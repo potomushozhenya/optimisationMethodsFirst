@@ -48,6 +48,26 @@ std::vector<double> operator*(std::vector<std::vector<double>> a, std::vector<do
     }
     return res;
 }
+std::vector<std::vector<double>> operator+(std::vector<std::vector<double>> a, std::vector<std::vector<double>> b){
+    unsigned int vecSize = b.size();
+    std::vector<std::vector<double>> res(vecSize, std::vector<double> (vecSize, 0));
+    for (int i = 0; i < vecSize; ++i) {
+        for (int j = 0; j < vecSize; ++j) {
+            res[i][j] = a[i][j]+b[i][j];
+        }
+    }
+    return res;
+};
+std::vector<std::vector<double>> operator*(double a, std::vector<std::vector<double>> b){
+    unsigned int vecSize = b.size();
+    std::vector<std::vector<double>> res(vecSize, std::vector<double> (vecSize, 0));
+    for (int i = 0; i < vecSize; ++i) {
+        for (int j = 0; j < vecSize; ++j) {
+            res[i][j] = a*b[i][j];
+        }
+    }
+    return res;
+}
 double norm(std::vector<double> x){
     double res = 0;
     for (int i = 0; i < x.size(); ++i) {
@@ -74,6 +94,13 @@ std::vector<double> baseVec(int &i, double &h, std::vector<double> &x){
         } else{
             res[i] = h;
         }
+    }
+    return res;
+}
+std::vector<std::vector<double>> E(int n){
+    std::vector<std::vector<double>> res(n, std::vector<double> (n, 0));
+    for (int i = 0; i < n; ++i) {
+        res[i][i] = 1;
     }
     return res;
 }
@@ -236,17 +263,39 @@ double goldenRatioFletcherDuplicate(double (*f)(std::vector<double>&), std::vect
     } while (((b-a)/2)>=eps);
     return (a+b)/2;
 }
-double goldenRatioNewtonDuplicate(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<std::vector<double>>(*f2Der)(std::vector<double>&), std::vector<double> &xk, double &eps){
+double goldenRatioNewtonDuplicate(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<std::vector<double>> &matrix, std::vector<double> &xk, double &eps){
     double a=-10;
     double b=10;
     double c=((3- pow(5,0.5))/2)*(b-a)+a;
     double d=((pow(5,0.5)-1)/2)*(b-a)+a;
+    std::vector<double> vec = inverse(matrix)*fDer(xk);
     do {
-        std::vector<std::vector<double>> pMatrix = f2Der(xk);
-        std::vector<double> vec = inverse(pMatrix)*fDer(xk);
         std::vector<double> point1 = xk + c*(vec);
         double fMean1 = f(point1);
         std::vector<double> point2 = xk + d*(vec);
+        double fMean2 = f(point2);
+        if (fMean1<=fMean2){
+            b=d;
+            d=c;
+            c=((3- pow(5,0.5))/2)*(b-a)+a;
+        } else{
+            a=c;
+            c=d;
+            d=((pow(5,0.5)-1)/2)*(b-a)+a;
+        }
+    } while (((b-a)/2)>=eps);
+    return (a+b)/2;
+}
+double goldenRatioQuasiNewtonDuplicate(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<std::vector<double>> &matrix, std::vector<double> &xk, double &eps){
+    double a=-10;
+    double b=10;
+    double c=((3- pow(5,0.5))/2)*(b-a)+a;
+    double d=((pow(5,0.5)-1)/2)*(b-a)+a;
+    std::vector<double> vec = matrix*fDer(xk);
+    do {
+        std::vector<double> point1 = xk - c*(vec);
+        double fMean1 = f(point1);
+        std::vector<double> point2 = xk - d*(vec);
         double fMean2 = f(point2);
         if (fMean1<=fMean2){
             b=d;
@@ -485,22 +534,32 @@ std::vector<double> newtonMethod(double (*f)(std::vector<double>&), std::vector<
     std::vector<double> xk = x0;
     while (norm(fDer(xk)) >= eps){
         std::vector<std::vector<double>> currMatrix = f2Der(xk);
-        /*std::cout << currMatrix;
-        std::cout<<std::endl;
-        std::cout<< inverse(currMatrix);
-        std::cout<<std::endl;
-        std::cout << goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps);
-        std::cout <<std::endl;
-        std::cout <<goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps)*(inverse(currMatrix)*fDer(xk));
-        std::cout <<std::endl;
-         goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps)
-         */
-        xk = xk + goldenRatioNewtonDuplicate(f, fDer, f2Der, xk, eps)*(inverse(currMatrix)*fDer(xk));
+        xk = xk + goldenRatioNewtonDuplicate(f, fDer, currMatrix, xk, eps)*(inverse(currMatrix)*fDer(xk));
     }
     return xk;
 }
-std::vector<double> quasiNewtonianMethod(){
-
+std::vector<double> quasiNewtonianMethod(double (*f)(std::vector<double>&), std::vector<double> (*fDer)(std::vector<double>&), std::vector<double> &x0,  double eps){
+    std::vector<double> xk = x0;
+    unsigned n = x0.size();
+    std::vector<std::vector<double>> H = E(n);
+    std::vector<double> grad = fDer(xk);
+    unsigned int k = 0;
+    while (norm(grad) >= eps){
+        double a = goldenRatioQuasiNewtonDuplicate(f, fDer, H, xk, eps);
+        std::vector<double> xPrev = xk;
+        std::vector<double> gradPrev = grad;
+        xk = xk - a*(H*fDer(xk));
+        grad = fDer(xk);
+        if ((k+1) % n == 0){
+            H = E(n);
+        } else{
+            std::vector<double> delta = xk- xPrev;
+            std::vector<double> gamma = grad - gradPrev;
+            H = H + (1/((delta - H*gamma)*gamma))*((delta - H*gamma)*(delta - H*gamma))*E(n);
+        }
+        ++k;
+    }
+    return xk;
 }
 int main() {
     //Начальные границы для метода дихотомии a=0 и b=2
@@ -510,7 +569,7 @@ int main() {
     double a=1;
     double b=2;
     double x0 = 0.5;
-    std::vector<double> xVec = {-7, 10};
+    std::vector<double> xVec = {-13, 100};
     //double eps=0.0000001;
     std::cout << std::fixed;
     std::cout << std::setprecision(16);
@@ -530,7 +589,8 @@ int main() {
     //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, true);
     //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, false);
     //std::cout << newtonMethod(fMul, fDerMul, f2DerMul, xVec, 0.00001);
-
+    std::cout << quasiNewtonianMethod(fMul, fDerMul, xVec, 0.00001);
+    
 
     return 0;
 }
