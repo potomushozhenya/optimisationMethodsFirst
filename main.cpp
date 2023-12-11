@@ -107,10 +107,32 @@ std::vector<std::vector<double>> E(int n){
 double f(double &x){
     return std::exp(x*0.6)+std::exp(x*0.1)+std::exp(x*0.12)-2.8*std::sin(x);
 }
+double f1761(double &x){
+    return -pow(x, 3)+ 3*(1+x)*(log(1+x)-1);
+}
 double fMul(std::vector<double> &x){
     double res;
     res = pow(x[0]-1, 2);
     res += pow(x[1]+1, 2);
+    return res;
+}
+double f17138(std::vector<double> &x){
+    double res = 0;
+    res += 3*x[0]*x[0];
+    res += 4*x[1]*x[1];
+    res += 5*x[2]*x[2];
+    res += 2*x[0]*x[1];
+    res += -x[0]*x[2];
+    res += -2*x[1]*x[2];
+    res += x[0];
+    res += -3*x[2];
+    return res;
+}
+std::vector<double> fDer17138(std::vector<double> &x){
+    std::vector<double> res(3,0);
+    res[0] += 6*x[0]+2*x[1]-x[2]+1;
+    res[1] += 8*x[1]+2*x[0]-2*x[2];
+    res[2] += 10*x[2]-x[0]-2*x[1]-3;
     return res;
 }
 std::vector<double> fDerMul(std::vector<double> &x){
@@ -568,13 +590,17 @@ int main() {
     //0-x1^2    1-x2^2    2-x3^2    3-x1x2    4-x1x3    5-x2x3    6-x1    7-x2    8-x3    9-c
     double a=1;
     double b=2;
+    double a1 = -0.5;
+    double b1 = 0.5;
     double x0 = 0.5;
     std::vector<double> xVec = {-13, 100};
-    //double eps=0.0000001;
+    std::vector<double> xVec1 = {0,0,0};
+    double eps=0.000001;
     std::cout << std::fixed;
     std::cout << std::setprecision(16);
     //std::vector<double> myPoly = {3,4,5,2,-1,-2,1,0,-3,0};
     //std::cout << goldenRatio(f,a,b,eps) << std::endl;
+    //std::cout << goldenRatio(f1761, a1, b1, eps)<< std::endl;
     //std::cout << fibonacci(f, a, b, 0.00001)<< std::endl;
     //std::cout << passiveSearch(f, a, b, 100000) << std::endl;
     //std::cout << newtonRaphson(fDer, f2Der,a , 0.0000001) << std::endl;
@@ -584,13 +610,15 @@ int main() {
     std::cout << gradientConstStep(fMul, fDerMul, xVec, 0.5, 0.00001);
     //std::cout << gradientFixedStep(fMul, fDerMul, xVec, 0.5, 0.00001);
     //std::cout << gradientSteepestDescent(fMul, fDerMul, xVec, 0.0000001);
+    std::cout << gradientSteepestDescent(f17138, fDer17138, xVec1, 0.000001);
     //std::cout << gradientPthOrder(fMul, fDerMul, xVec, 0.000001);
     //std::cout << gullyMethod(fMul, fDerMul, xVec, 0.00001, 0.1);
     //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, true);
     //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, false);
     //std::cout << newtonMethod(fMul, fDerMul, f2DerMul, xVec, 0.00001);
-    std::cout << quasiNewtonianMethod(fMul, fDerMul, xVec, 0.00001);
-    
+    //std::cout << quasiNewtonianMethod(fMul, fDerMul, xVec, 0.00001);
+    //std::cout << quasiNewtonianMethod(f17138, fDer17138, xVec1, 0.000001);
+
 
     return 0;
 }
