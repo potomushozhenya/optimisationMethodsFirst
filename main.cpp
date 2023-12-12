@@ -68,6 +68,16 @@ std::vector<std::vector<double>> operator*(double a, std::vector<std::vector<dou
     }
     return res;
 }
+std::vector<std::vector<double>> vecMultiply(std::vector<double> &a, std::vector<double> &b){
+    unsigned int vecSize = b.size();
+    std::vector<std::vector<double>> res(vecSize, std::vector<double> (vecSize, 0));
+    for (int i = 0; i < vecSize; ++i) {
+        for (int j = 0; j < vecSize; ++j) {
+            res[i][j] = a[i]*b[j];
+        }
+    }
+    return res;
+}
 double norm(std::vector<double> x){
     double res = 0;
     for (int i = 0; i < x.size(); ++i) {
@@ -577,7 +587,10 @@ std::vector<double> quasiNewtonianMethod(double (*f)(std::vector<double>&), std:
         } else{
             std::vector<double> delta = xk- xPrev;
             std::vector<double> gamma = grad - gradPrev;
-            H = H + (1/((delta - H*gamma)*gamma))*((delta - H*gamma)*(delta - H*gamma))*E(n);
+            double coef = (delta - H*gamma)*gamma;
+            coef = 1/coef;
+            std::vector<double> currVec = delta-H*gamma;
+            H = H + coef*vecMultiply(currVec, currVec);
         }
         ++k;
     }
@@ -616,8 +629,8 @@ int main() {
     //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, true);
     //std::cout << conjugateDirectionsMethod(fMul, fDerMul, xVec, 0.000001, false);
     //std::cout << newtonMethod(fMul, fDerMul, f2DerMul, xVec, 0.00001);
-    //std::cout << quasiNewtonianMethod(fMul, fDerMul, xVec, 0.00001);
-    //std::cout << quasiNewtonianMethod(f17138, fDer17138, xVec1, 0.000001);
+    std::cout << quasiNewtonianMethod(fMul, fDerMul, xVec, 0.00001);
+    std::cout << quasiNewtonianMethod(f17138, fDer17138, xVec1, 0.000001);
 
 
     return 0;
